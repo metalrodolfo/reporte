@@ -22,11 +22,11 @@ class block_reporte extends block_base {
 		}
 
 			$this->content = new stdClass;
+			$course = $PAGE->course;
 			
-			$params = array(1,1,$course->id);
-			
-			//Traer las tareas
-			$sql_assing = "SELECT asub.id, a.name, us.firstname, us.lastname, asub.timecreated, asub.timemodified
+			//Mis tareas hechas
+			$params = array(1,1,$course->id,$USER->id);
+			$sql_myassing = "SELECT asub.id, a.name, us.firstname, us.lastname, asub.timecreated, asub.timemodified
 						 	FROM {course_modules} as cm INNER JOIN {modules} as m ON (cm.module = m.id) 
 						   		INNER JOIN {assign} as a ON (a.course = cm.course) 
     					   		INNER JOIN {assign_submission} as asub ON ( asub.assignment = a.id) 
@@ -35,8 +35,24 @@ class block_reporte extends block_base {
 								AND cm.visible = ? 
     							AND m.visible = ?
     							AND cm.course = ?
+								AND us.id = ?
 							ORDER BY asub.timemodified DESC,asub.id";
-			$lastassings = $DB->get_records_sql($sql_assing, $params);
+			$myassings = $DB->get_records_sql($sql_myassing, $params);
+			
+			// Total tareas
+			$params = array(1,1,$course->id);
+			$sql_allassing = "SELECT asub.id
+						 	FROM mdl_course_modules as cm INNER JOIN mdl_modules as m ON (cm.module = m.id)
+						   		INNER JOIN mdl_assign as a ON (a.course = cm.course)
+    					   		INNER JOIN mdl_assign_submission as asub ON ( asub.assignment = a.id)
+						 	WHERE m.name in ('assign')
+								AND cm.visible = '1'
+    							AND m.visible = '1'
+    							AND cm.course = '11'
+							GROUP BY asub.id";
+			$allassings = $DB->get_records_sql($sql_allassing, $params);
+			
+			
 			
 			//Traer los quiz
 			$sql_quiz = "SELECT qatt.id, q.name, us.firstname, us.lastname, qatt.timestart, qatt.timefinish
@@ -52,6 +68,7 @@ class block_reporte extends block_base {
 			$lastquiz = $DB->get_records_sql($sql_quiz, $params);
 			
 			// Traer los recursos
+			$params = array(1,1,$course->id,$USER->id);
 			$sql_resources = "SELECT log.id, r.name, us.firstname, us.lastname, log.timecreated
 						 	FROM {course_modules} as cm INNER JOIN {modules} as m ON (cm.module = m.id) 
 						   		INNER JOIN {resource} as r ON (r.course = cm.course)
@@ -62,41 +79,23 @@ class block_reporte extends block_base {
 								AND cm.visible = ? 
     							AND m.visible = ?
     							AND cm.course = ?
+								AND us.id = ?
     					  	ORDER BY log.timecreated DESC, log.id ";
-			$lastresources = $DB->get_records_sql($sql_resources, $params);
+			$myresources = $DB->get_records_sql($sql_resources, $params);
 			
 			// Creación de tabla que muestra las últimas 5 tareas enviadas
-			$table_assign = new html_table();
-			$table_assign->head = array('Assing', '', '');
-			$i=0;
-			foreach($lastassings as $assing){
-				$i++;
-			}
-			echo $i;
-			// Creación de tabla que muestra los ultimos 5 quiz
-			$table_quiz = new html_table();
-			$table_quiz->head = array('Quiz', '', '');
-			foreach($lastquiz as $quiz){
-				$timefinish = date('d-m-Y  H:i',$quiz->timefinish);
-				$table_quiz->data[] = array($quiz->name,$quiz->firstname." ".$quiz->lastname, $timefinish);
-			}
+			$table_reports = new html_table();
+			$table_reports->head = array('', '');
+			$table_reports->data[] = array("Total tareas enviadas",count($myassings));
+			$table_reports->data[] = array("Total no tareas enviadas",(count($allassings)-count($myassings)));
+			$table_reports->data[] = array("Recursos visualizados",count($myresources));
 			
-			// Creación de tabla que muestra los ultimos 5 archivos descargados
-			$table_resource = new html_table();
-			$table_resource->head = array('Resource', '', '');
-			foreach($lastresources as $resource){
-				$timefinish = date('d-m-Y  H:i',$resource->timecreated);
-				$table_resource->data[] = array($resource->name,$resource->firstname." ".$resource->lastname, $timefinish);
-			}
+
 					
-			$lookassign = new moodle_url('../local/actividadSocial/index.php', array('action'=>'assign', 'cmid'=>$course->id));
-			$lookquiz = new moodle_url('../local/actividadSocial/index.php', array('action'=>'quiz', 'cmid'=>$course->id));
-			$lookresource = new moodle_url('../local/actividadSocial/index.php', array('action'=>'resource', 'cmid'=>$course->id));
+			$seemore = new moodle_url('../local/reportealumnos/index.php', array('cmid'=>$course->id));
 			
 			
-			$this->content->text = html_writer::table($table_assign).$OUTPUT->single_button($lookassign,"See more").
-									"".html_writer::table($table_quiz).$OUTPUT->single_button($lookquiz,"See more").
-									"".html_writer::table($table_resource).$OUTPUT->single_button($lookresource,"See more");
+			$this->content->text = html_writer::table($table_reports).$OUTPUT->single_button($seemore,"Ver más");
 			$this->content->footer = "";
 			
 			return $this->content;

@@ -92,7 +92,7 @@ class block_reporte extends block_base {
 			
 
 					
-			$seemore = new moodle_url('../local/reportealumnos/index.php', array('cmid'=>$course->id));
+			$seemore = new moodle_url('../local/reportesalumnos/index.php', array('cmid'=>$course->id));
 			
 			
 			$this->content->text = html_writer::table($table_reports).$OUTPUT->single_button($seemore,"Ver más");
